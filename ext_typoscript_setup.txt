@@ -1,0 +1,61 @@
+plugin.tx_rsgoogleanalytics {
+	# Boolean, weather plugin is active or not
+	active = 1
+	
+	# Your Google-Analytics Account, standard is Test-Account of RS WebSystems
+	account = UA-1628673-4
+
+	# Which Page Title should be tracked   Option title: Page title is set, Option rootline: Rootline of Titles ist set, blank: GA uses page-path, for 
+	registerTitle= rootline
+
+	# Should Downloads be tracked by GA, or option !ALL, all file-downloads will be tracked
+	trackDownloads = 1
+	# Folders in which should be tracked only
+	trackDownloads.folderList = fileadmin/,uploads/
+	# restrict tracking to filetypes
+	trackDownloads.fileTypes = pdf,doc
+
+	# track External links, another possibility is !ALL tracks all external Urls
+	trackExternals = 1
+	# restrict tracking to this domains
+	trackExternals.domainList = amazon.com,typo3.org
+
+	#Chnage Path of Cookie, if 0 standard / is used
+	changeCookiePath = 0
+	# If you have multiple Domains for this site enable
+	multipleDomains = 0
+	# Only Works if multipleDomains is false
+	trackSubDomains = 0
+
+	# Disable loggin different userdata
+	disableData {
+		# if enabled no logging browser of Browser information
+		browserInfo = 0
+		# if enabled, GA will not test for enabled cookies
+		cookieTest = 0
+		# if enebaled, GA will not try to detect users flash version
+		flashTest = 0
+		# if enabled, page title will not be Saved
+		pageTitle = 0
+	}
+
+	# Keywords and Referers which are treated as direct access
+	redirectKeywords = my name, my domain, city and company name
+	redirectReferer = example.net,domain2-redirected.de,my-web-agency.de
+
+
+	#BE CAREFUL, DO NOT TOUCH, IF DO NOT REALLY KNOW ALL  CONSEQUENCES
+	sessionTimeOut = 0
+	#BE CAREFUL, DO NOT TOUCH, IF DO NOT REALLY KNOW ALL  CONSEQUENCES
+	campaignTimeOut = 0
+	#BE CAREFUL, DO NOT TOUCH, IF DO NOT REALLY KNOW ALL  CONSEQUENCES
+	samplingRate = 0
+
+
+}
+
+
+page.9999 = USER_INT
+page.9999 {
+	userFunc = tx_rsgoogleanalytics->processTrackingCode
+}
