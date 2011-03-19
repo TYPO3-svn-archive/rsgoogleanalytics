@@ -1,313 +1,401 @@
 <?php
 /***************************************************************
-*  Copyright notice
-*
-*  (c) 2005-6 	Steffen Ritter (info@rs-websystems.de)
-*
-*  All rights reserved
-*
-*  This script is free software; you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation; version 2 of the License.
-*
-*  The GNU General Public License can be found at
-*  http://www.gnu.org/copyleft/gpl.html.
-*
-*  This script is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
-*
-*  This copyright notice MUST APPEAR in all copies of the script!
-***************************************************************/
-/**
- * Hooks for the 'rs_googleanalytics' extension.
- * Inspired by m1_google_analytics, using new ga.js
+ *  Copyright notice
+ *
+ *  (c) 2005-2011	 Steffen Ritter (info@rs-websystems.de)
+ *
+ *  All rights reserved
+ *
+ *  This script is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; version 2 of the License.
+ *
+ *  The GNU General Public License can be found at
+ *  http://www.gnu.org/copyleft/gpl.html.
+ *
+ *  This script is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  This copyright notice MUST APPEAR in all copies of the script!
+ ***************************************************************/
+
+/*
+ * Inspired by m1_google_analytics, using ga.js
  *
  * @author	Steffen Ritter
  */
-
-
-class tx_rsgoogleanalytics {
-
+class tx_rsgoogleanalytics implements t3lib_singleton {
+	/**
+	 * @var string
+	 */
+	var $trackerVar = 'pageTracker';
 
 	/**
 	 * Saves TypoScript config
 	 */
 	var $modConfig = array();
 
-	
+	/**
+	@var array
+	 */
+	protected $commands = array();
+
+	/**
+	 * @var array
+	 */
+	protected $domainConfig = array();
+
+	/**
+	 * @var array
+	 */
+	protected $eCommerce = array('items' => array(), 'transaction' => array());
+
+	/**
+	 * constructs the system.
+	 */
+	public function __construct() {
+		$this->modConfig = $GLOBALS['TSFE']->tmpl->setup['plugin.']['tx_rsgoogleanalytics.'];
+
+		if (t3lib_extmgm::isLoaded('naw_securedl')) {
+			$this->specialFiles = 'naw';
+		}
+		if (t3lib_extmgm::isLoaded('dam_frontend')) {
+			$this->specialFiles = 'dam_frontend';
+		}
+	}
+
 	/**
 	 * adds the tracking code at the end of the body tag (pi Method called from TS USER_INT). further the method
 	 * adds some js code for downloads and exteneral links if configured.
 	 *
 	 * @var		string	page content
 	 * @return	string	page content with google tracking code.
-
 	 */
-	function processTrackingCode($content,$params){
-		$this->getConfig();
-		if ( $GLOBALS['TSFE']->type != 0 ) return;
-		
-		if ( $this->modConfig['registerTitle'] == 'title') {
-			$pageName = '\''. $GLOBALS['TSFE']->page['title'] . '\'';
+	public function processTrackingCode($content, $params) {
+			// return if the extension is not activated or no account is configured
+		if (!$this->isActive()) {
+			return content;
 		}
-		else if ($this->modConfig['registerTitle'] == 'rootline') {
+			// detect how the pageTitle should be rendered
+		if ($this->modConfig['registerTitle'] == 'title') {
+			$pageName = '\'' . $GLOBALS['TSFE']->page['title'] . '\'';
+		} else if ($this->modConfig['registerTitle'] == 'rootline') {
 			$rootline = $GLOBALS['TSFE']->sys_page->getRootLine($GLOBALS['TSFE']->page['uid']);
 			$pageName = '\'';
-			for ($i=0; $i < count($rootline) ; $i++ ) {
-				if ( $rootline[$i]['is_siteroot']==0 )  {
-					$pageName .= '/' . $rootline[$i]['title'];
+			for ($i = 0; $i < count($rootline); $i++) {
+				if ($rootline[$i]['is_siteroot'] == 0) {
+					$pageName .= '/' . addslashes($rootline[$i]['title']);
 				}
 			}
 			$pageName .= '\'';
+		} else {
+			$pageName = NULL;
 		}
-
-
-		// Add the tracking code to the end of <head> element
-		return $content . $this->tracking_code( $pageName );
+		return $this->buildTrackingCode($pageName);
 	}
 
 	/**
-	 * generates the google tracking code (js script at the end of the body tag).
+	 * This method generates the google tracking code (js script at the end of the body tag).
 	 *
 	 * @return	string	js tracking code
 	 */
-	function tracking_code($pageName = '') {
-		$protocolcode =
-			'<script type="text/javascript">' . "\n" .
-			'	var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");'."\n" .
-			"	document.write(unescape(\"%3Cscript src='\" + gaJsHost + \"google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E\"));"."\n" .
-			'</script>';"\n" .
+	protected function buildTrackingCode($pageName = NULL) {
+		$codeTemplate = file_get_contents(t3lib_div::getFileAbsFileName('EXT:rsgoogleanalytics/codeTemplate.js'));
+		$marker = array(
+			'ACCOUNT' => $this->modConfig['account'],
+			'TRACKER_VAR' => $this->trackerVar,
+			'COMMANDS' => ''
+		);
 
-		$specialOptions = $this->buildSpecials();
+		if ($pageName === NULL) {
+			$this->commands[999] = $this->buildCommand('trackPageview', array());
+		} else {
+			$this->commands[999] = $this->buildCommand('trackPageview', array($pageName));
+		}
 
-		$maincode =
-			'<script type="text/javascript">'."\n" .
-			'	var pageTracker = _gat._getTracker("' . $this->modConfig['account'] .'");' ."\n" .
-			'	pageTracker._initData();' ."\n" .
-				$specialOptions .
-			'	pageTracker._trackPageview('.$pageName.');' ."\n" .
-			'</script>'."\n" ;
+		$this->makeDomainConfiguration();
+		$this->makeSearchEngineConfiguration(); // 100
+		$this->makeSpecialVars(); // 300
+		$this->makeDataTracking(); // 500
+		$this->makeECommerceTracking(); // 2000
 
-		return $protocolcode . "\n". $maincode;
+		ksort($this->commands);
+		$marker['COMMANDS'] = implode("\n", $this->commands);
+		$code = t3lib_parsehtml::substituteMarkerArray($codeTemplate, $marker, '###|###', true, true);
+
+		return $code;
 	}
 
 	/**
-	 * loads TypoScript configuration, fills probably needed fallback config
-	 *
+	 * generates Commands which are needed for sub/cross-domain-tracking.
+	 * linkProcessing needs this to handle the domains, which should get a "link" tracker
 	 */
-	private function getConfig() {
-		$this->modConfig = $GLOBALS["TSFE"]->tmpl->setup['plugin.']['tx_rsgoogleanalytics.'];
-		
-		if(t3lib_extmgm::isLoaded('naw_securedl')) {
-			$this->specialFiles = 'naw';
-		}
-		if(t3lib_extmgm::isLoaded('dam_frontend')) {
-			$this->specialFiles = 'dam_frontend';
+	protected function makeDomainConfiguration() {
+		if (count($this->domainConfig) == 0) {
+			if ($this->modConfig['multipleDomains'] && $this->modConfig['multipleDomains'] != 'false') {
+				$this->domainConfig['multiple'] = t3lib_div::trimExplode(',', $this->modConfig['multipleDomains.']['domainNames'], 1);
+				$this->commands[10] = $this->buildCommand("setDomainName", array("none"));
+				$this->commands[11] = $this->buildCommand("setAllowLinker", array("enable"));
+				$this->commands[12] = $this->buildCommand("setAllowHash", array(false));
+
+			} else if ($this->modConfig['trackSubDomains'] && $this->modConfig['trackSubDomains'] != 'false') {
+				$this->commands[10] = $this->buildCommand("setDomainName", array("." . $this->modConfig['trackSubDomains.']['domainName']));
+				$this->commands[12] = $this->buildCommand("setAllowHash", array(false));
+			}
 		}
 	}
 
 	/**
-	 * buildSpecials()
-	 * Function creates JS Commands for Special, non Standard Tracking behaviour
-	 *
-	 * @return string Returns Additional Lines JS Script
+	 * @return void
 	 */
-	 private function buildSpecials() {
-	 	$addCommands = '';
-		if ($this->modConfig['multipleDomains'] == 1) {
-			$addCommands .= "	pageTracker._setDomainName(\"none\");\n";
+	protected function makeSpecialVars() {
+		$x = 300;
+		$cObj = t3lib_div::makeInstance('tslib_cObj');
+
+			// render CustomVars
+		for ($i = 1; $i <= 5; $i++) {
+			if (is_array($this->modConfig['customVars.'][$i . '.'])) {
+				$data = $cObj->stdWrap('', $this->modConfig['customVars.'][$i . '.']);
+				if (trim($data)) {
+					$this->commands[$x] = $this->buildCommand(
+						'setCustomVar',
+						array(
+							$i, $this->modConfig['customVars.'][$i . '.']['name'],
+							$data, $this->modConfig['customVars.'][$i . '.']['scope']
+						)
+					);
+				}
+				$x++;
+			}
 		}
-		if ( $this->modConfig['trackSubDomains'] == 1) {
-			$addCommands .= "	pageTracker._setDomainName(\"".$_SERVER['HTTP_HOST']. "\");\n";
+
+		// render customSegment
+		$currentValue = explode('.', $_COOKIE['__utmv']);
+		$currentValue = $currentValue[1];
+		$shouldBe = $cObj->stdWrap('', $this->modConfig['visitorSegment.']);
+		if ($currentValue != $shouldBe && trim($shouldBe) !== '') {
+			$this->commands[$x] = $this->buildCommand('setVar', array($shouldBe));
 		}
-		if ( $this->modConfig['multipleDomains'] && $this->modConfig['trackExternals'] ) {
-			$addCommands .= "	pageTracker._setAllowLinker(true);\n";
+	}
+
+	/**
+	 * @return
+	 */
+	protected function makeECommerceTracking() {
+		if (!$this->modConfig['eCommerce.']['enableTracking']) return;
+		$i = 2000; // Should be after trackPageView()
+		foreach ($this->eCommerce['transaction'] AS $trans) {
+			$this->commands[$i] = $this->buildCommand('addTrans', $trans);
+			$i++;
 		}
-		if ($this->modConfig['changeCookiePath']) {
-			$addCommands .= "	pageTracker._setCookiePath(\"".trim($this->modConfig['changeCookiePath'])."\");\n";
+		foreach ($this->eCommerce['items'] AS $item) {
+			$this->commands[$i] = $this->buildCommand('addItem', $item);
+			$i++;
 		}
-		
-		// Track less data
-		if ($this->modConfig['disableData.']['browserInfo']) {
-			$addCommands .= "	pageTracker._setClientInfo(false); // track browser info\n";
+
+		if (count($this->eCommerce['transaction']) > 0 || count($this->eCommerce['items']) > 0) {
+			$this->commands[$i] = $this->buildCommand('trackTrans', array());
 		}
-		if ($this->modConfig['disableData.']['cookieTest']) {
-			$addCommands .= "	pageTracker._setAllowHash(false); // cookie integrity checking\n";
-		}
-		if ($this->modConfig['disableData.']['flashTest']) {
-			$addCommands .= "	pageTracker._setDetectFlash(false); // detect Flash version\n";
-		}
-		if ($this->modConfig['disableData.']['pageTitle']) {
-			$addCommands .= "	pageTracker._setDetectTitle(false); // track title in reports\n";
-		}
-		
-		// Modify tracking parameters
-		if ($this->modConfig['sessionTimeOut']) {
-			$addCommands .= "	pageTracker._setSessionTimeout(\"".trim($this->modConfig['sessionTimeOut'])."\");\n";
-		}
-		if ($this->modConfig['campaignTimeOut']) {
-			$addCommands .= "	pageTracker._setCookieTimeout(\"".trim($this->modConfig['campaignTimeOut'])."\");\n";
-		}
-		
-		// Set keywords which should marked as redirect
+	}
+
+	/**
+	 * @return void
+	 */
+	protected function makeSearchEngineConfiguration() {
+			// Set keywords which should marked as redirect
 		if ($this->modConfig['redirectKeywords']) {
-			$keywords = explode(',',$this->modConfig['redirectKeywords']);
-			foreach($keywords as $key => $val) {
-				$addCommands .= "	pageTracker._addIgnoredOrganic(\"".trim($val)."\");\n";
+			$keywords = t3lib_div::trimExplode(',', $this->modConfig['redirectKeywords'], 1);
+			$i = 100;
+			foreach ($keywords AS $val) {
+				$this->commands[$i] = $this->buildCommand('addIgnoredOrganic', array($val));
+				$i++;
 			}
 		}
-		
-		// which redirects should be handled as "own domain"
+			// which referers should be handled as "own domain"
 		if ($this->modConfig['redirectReferer']) {
-			$keywords = explode(',',$this->modConfig['redirectReferer']);
-			foreach($keywords as $key => $val) {
-				$addCommands .= "	pageTracker._addIgnoredRef(\"".trim($val)."\");\n";
+			$domains = t3lib_div::trimExplode(',', $this->modConfig['redirectReferer'], 1);
+			foreach ($domains AS $val) {
+				$this->commands[$i] = $this->buildCommand('addIgnoredRef', array($val));
+				$i++;
 			}
 		}
-		
-		
-		// Track user Information
-		if(is_array($GLOBALS['TSFE']->fe_user->user)) {
-			$cookieWert= explode('.',$_COOKIE['__utmv']);
-			$cookieWert=$cookieWert[1];
-			$user = $GLOBALS['TSFE']->fe_user->user;
-			if( trim($cookieWert) != trim($user['name']) ) {
-				$addCommands .= "	pageTracker._setVar(\"".trim($user['name'])."\");\n";	
+	}
+
+	protected function makeDataTracking() {
+		if ($this->modConfig['disableDataTracking.']['browserInfo']) {
+			$this->commands[500] = $this->buildCommand('setClientInfo', array(false));
+		}
+		if ($this->modConfig['disableDataTracking.']['flashTest']) {
+			$this->commands[501] = $this->buildCommand('setDetectFlash', array(false));
+		}
+		if ($this->modConfig['disableDataTracking.']['pageTitle']) {
+			$this->commands[502] = $this->buildCommand('setDetectTitle', array(false));
+		}
+		if ($this->modConfig['disableDataTracking.']['anonymizeIp']) {
+			$this->commands[503] = $this->buildCommand('anonymizeIp', array());
+		}
+	}
+
+	protected function buildCommand($command, array $parameter) {
+		return "\t" . $this->trackerVar . '._' . $command . '(' . implode(',', $this->wrapJSParams($parameter)) . ');';
+	}
+
+	protected function wrapJSParams(array $parameter) {
+		for ($i = 0; $i < count($parameter); $i++) {
+			if (!is_bool($parameter[$i]) && !is_numeric($parameter[$i])) {
+				$parameter[$i] = '"' . str_replace('"', '\"', $parameter[$i]) . '"';
+			} else if (is_bool($parameter[$i])) {
+				$parameter[$i] = ($parameter[$i] ? 'true' : 'false');
 			}
 		}
-		
-		
-	 	return $addCommands ;
-	 }
+		return $parameter;
+	}
 
 	/**
-	 * Checks wether URL is in list to track
+	 * This method checks whether the URL is in the list to track
 	 *
-	 * @param string $file filename (with directories from siteroot) which is linked
-	 * @return boolean true if filename is in locations, false if not
-	 *
+	 * @param	string		$file: filename (with directories from siteroot) which is linked
+	 * @return	boolean		True if filename is in locations, false if not
 	 */
-	private function checkURL($url = string) {
-		
-		$locations = explode(',',$this->modConfig['trackExternals.']['domainList']);
-		
-		foreach($locations as $key => $location) {
-			if ( false !== strpos($url,$location) ) return true;
+	protected function checkURL($url) {
+		$locations = t3lib_div::trimExplode(',', $this->modConfig['trackExternals.']['domainList'], 1);
+		foreach ($locations as $location) {
+			if (strpos($url, $location) !== false) return true;
 		}
 		return false;
 	}
 
-
-
 	/**
-	 * Checks wether filePath is in paths to track
-	 *
-	 * @param string $file filename (with directories from siteroot) which is linked
-	 * @return boolean true if filename is in locations, false if not
-	 *
+	 * This method checks whether the given file is in the paths to track
+	 * @param	string		$file: filename (with directories from siteroot) which is linked
+	 * @return	boolean		True if filename is in locations, false if not
 	 */
-	private function checkFilePath($file = string) {
-		$locations = explode(',',$this->modConfig['trackDownloads.']['folderList']);
-
-		foreach($locations as $key => $location) {
-			if ( false !== strpos($file,$location) ) return true;
+	protected function checkFilePath($file) {
+		$locations = t3lib_div::trimExplode(',', $this->modConfig['trackDownloads.']['folderList']);
+		foreach ($locations as $location) {
+			if (strpos($file, $location) !== false) return true;
 		}
 		return false;
 	}
-	/**
-	 * Checks wether fileType is type to track
-	 *
-	 * @param string $file filename (with directories from siteroot) which is linked
-	 * @return boolean true if filename is in list, false if not
-	 *
-	 */
-	private function checkFileType($file = string) {
-		$types = explode(',',$this->modConfig['trackDownloads.']['fileTypes']);
 
-		foreach($types as $key => $type) {
-			if ( $type == substr($file,-strlen($type)) ) return true;
-		}
-		return false;
+	/**
+	 * This method checks whether the given file if of a type to track
+	 *
+	 * @param	string		$file: filename (with directories from siteroot) which is linked
+	 * @return	boolean		True if filename is in list, false if not
+	 */
+	protected function checkFileType($file) {
+		$pathParts = pathinfo($file);
+		return t3lib_div::inList($this->modConfig['trackDownloads.']['fileTypes'], $pathParts['extension']);
 	}
+
 	/**
 	 * Checks wether filePath and Type is in allowed range
 	 * @param string $file filename (with directories from siteroot) which is linked
 	 * @return boolean true if filename is in locations and filetype should be tracked, false if not
 	 */
-	private function checkFile(&$file = string) {
-		if( $this->specialFiles ) {
-				switch ($this->specialFiles ) {
-					case 'naw':
-						// Nothing special must be done, transformation is done in contentPostProc_all (typolinks are generated "normally")	
-						break;
-					case 'dam_frontend':
-						if ( false !== strpos($file,'pushfile.php?docID') ) {// Get file UID and get Information from DAM
-							$link = explode('?',$file);
-							$new_link = $link[1];
-							
-							$parts = explode('&',$new_link);
-							list($key,$param) = explode('=',$parts[0]);
-							if($key == 'docID') {
-								$file_id = $param;
-								list($file_data) = $GLOBALS['TYPO3_DB']->exec_SELECTgetRows('file_name','tx_dam','uid=' .$file_id);
-								$file_name = 'DAM/'.$file_data['file_name'];
-								if($this->modConfig['showDAMrealFile'] == 1) {
-									$file = $file_name;
-								}
-							}
-						}
-						break;
-					default:
-						$file_name = $file;
-				}	
-		} 
-		
-		return $this->checkFilePath($file_name) && $this->checkFileType($file_name);
-		
+	protected function checkFile(&$file) {
+		return $this->checkFilePath($file) && $this->checkFileType($file);
+
 	}
 
 	/**
 	 * Hooks into TYPOLink Generation
 	 * classic userFunc hook called in tslib/tslib_content.php
+	 * Used to add Google Analytics tracking code to hyperlinks
 	 *
+	 * @return void
 	 */
-	function linkPostProcess(&$params, &$reference)  {
-		
-		$this->getConfig();
+	function linkPostProcess(&$params, &$reference) {
+		if (!$this->isActive()) return;
+		$this->makeDomainConfiguration();
 
-		// quit immediately if no Google Analytics Account defined, or not activated
-		if (!($this->modConfig['account'] && $this->modConfig['active'])) return;
-
-		switch($params['finalTagParts']['TYPE']) {
+		$function = FALSE;
+		switch ($params['finalTagParts']['TYPE']) {
 			case 'page':
-
+				// do nothing on normal links
 				break;
 			case 'url' :
-				if( ($this->modConfig['trackExternals'] == 1 && $this->checkURL($params['finalTagParts']['url'])) || ($this->modConfig['trackExternals'] == '!ALL') ) {
-					if ( ! stripos('onclick',$params['finalTagParts']['aTagParams'])) {
-						$params['finalTagParts']['aTagParams'] .= " onclick=\"pageTracker._link(('". $params['finalTagParts']['url'] ."');\"";
-						$params['finalTag'] = str_replace('>'," onclick=\"pageTracker._link('". $params['finalTagParts']['url'] ."');\">",$params['finalTag']);
-					}
+				$url = $params['finalTagParts']['url'];
+				if ( /*checkInMultiple($url)*/
+					0) {
+					$function = $this->buildCommand('link', array($url)) . 'return false;';
+				} else if ($this->modConfig['trackExternals'] && ($this->checkURL($url) || $this->modConfig['trackExternals'] == '!ALL')) {
+					$function = $this->buildCommand('trackEvent', array('Leaving Site', 'External URL', $url));
 				}
 				break;
 			case 'file':
-				if( ($this->modConfig['trackDownloads'] == 1 && $this->checkFile($params['finalTagParts']['url'])) || ($this->modConfig['trackDownloads'] == '!ALL') ) {
-					if ( ! stripos('onclick',$params['finalTagParts']['aTagParams'])) {
-						$params['finalTagParts']['aTagParams'] .= " onclick=\"pageTracker._trackPageview('". $params['finalTagParts']['url'] ."');\"";
-						$params['finalTag'] = str_replace('>'," onclick=\"pageTracker._trackPageview('". $params['finalTagParts']['url'] ."');\">",$params['finalTag']);
+				if ($this->modConfig['trackDownloads']) {
+					$fileName = $params['finalTagParts']['url'];
+					$file = t3lib_div::getFileAbsFileName($fileName);
+					$fileInfo = pathinfo($file);
+					// TODO: provide hook where downloader extension can register there transformation function
+
+					if ($this->checkFile($fileName) || $this->modConfig['trackDownloads'] == '!ALL') {
+						$function = $this->buildCommand('trackEvent', array('Download', $fileInfo['extension'], $fileName));
 					}
 				}
 				break;
 		}
-
+		if (!stripos('onclick', $params['finalTagParts']['aTagParams']) && $function !== FALSE) {
+			$function = str_replace('"', '\'', trim($function));
+			$params['finalTagParts']['aTagParams'] .= ' onclick="' . $function . '"';
+			$params['finalTag'] = str_replace('>', ' onclick="' . $function . '">', $params['finalTag']);
+		}
 	}
 
+	/**
+	 * adds an single Item to an eCommerce Transaction to be tracked
+	 *
+	 * @param string $orderId
+	 * @param string $sku
+	 * @param string $name
+	 * @param string $category
+	 * @param string $price
+	 * @param string $quantity
+	 * @return void
+	 */
+	public function addCommerceItem($orderId, $sku, $name, $category, $price, $quantity) {
+		if (!$this->isActive() || !$this->modConfig['eCommerce.']['enableTracking']) return;
+
+		if (isset($this->eCommerce['transaction'][$orderId])) {
+			$this->eCommerce['items'][] = array(0 => $orderId, 1 => $sku, 2 => $name, 3 => $category, 4 => $price, 5 => $quantity);
+		}
+	}
+
+	/**
+	 * adds an ecommerce transaction to be tracked
+	 *
+	 * @param string $orderId
+	 * @param string $storeName
+	 * @param string $total
+	 * @param string $tax
+	 * @param string $shipping
+	 * @param string $city
+	 * @param string $state
+	 * @param string $country
+	 * @return void
+	 */
+	public function addCommerceTransaction($orderId, $storeName, $total, $tax, $shipping, $city, $state, $country) {
+		if (!$this->isActive() || !$this->modConfig['eCommerce.']['enableTracking']) return;
+
+		$this->eCommerce['transaction'][$orderId] = array(0 => $orderId, 1 => $storeName, 2 => $total, 3 => $tax, 4 => $shipping, 5 => $city, 6 => $state, 7 => $country);
+	}
+
+	/**
+	 * Checks wether the plugin is active
+	 *
+	 * @return bool
+	 */
+	protected function isActive() {
+		return intval($this->modConfig['active']) == 1 && trim($this->modConfig['account']) != '';
+	}
 }
 
 
-if (defined("TYPO3_MODE") && $TYPO3_CONF_VARS[TYPO3_MODE]["XCLASS"]["ext/rsgoogleanalytics/class.tx_rsgoogleanalytics.php"])	{
+if (defined("TYPO3_MODE") && $TYPO3_CONF_VARS[TYPO3_MODE]["XCLASS"]["ext/rsgoogleanalytics/class.tx_rsgoogleanalytics.php"]) {
 	include_once($TYPO3_CONF_VARS[TYPO3_MODE]["XCLASS"]["ext/rsgoogleanalytics/class.tx_rsgoogleanalytics.php"]);
 }
 
