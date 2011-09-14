@@ -1,11 +1,17 @@
 plugin.tx_rsgoogleanalytics {
-	# Boolean, weather plugin is active or not
+	# File containing the JavaScript code template
+	templateFile = EXT:rsgoogleanalytics/res/templates/codeTraditional.js
+
+	# Whether tradition or asynchronous method should be used (set to 1 for asynchronous). Beware to be consistent with template file
+	asynchronous = 0
+
+	# Boolean, whether plugin is active or not
 	active = 1
 
 	# Your Google-Analytics Account, standard is Test-Account of RS WebSystems
 	account = UA-1628673-4
 
-	# Which Page Title should be tracked   Option title: Page title is set, Option rootline: Rootline of Titles ist set, blank: GA uses page-path, for 
+	# Which Page Title should be tracked   Option title: Page title is set, Option rootline: Rootline of Titles ist set, blank: GA uses page-path, for
 	registerTitle= rootline
 
 	# Should Downloads be tracked by GA, or option !ALL, all file-downloads will be tracked
@@ -19,11 +25,11 @@ plugin.tx_rsgoogleanalytics {
 	trackExternals = 1
 	# restrict tracking to this domains
 	trackExternals.domainList = amazon.com,typo3.org
-	
+
 	# If you have multiple Domains for this site enable
 	multipleDomains = 0
-	multipleDomain.domainNames = 
-	
+	multipleDomain.domainNames =
+
 	# Only Works if multipleDomains is false
 	trackSubDomains = 0
 	# domainName (not www.example.com)!!!
@@ -36,7 +42,7 @@ plugin.tx_rsgoogleanalytics {
 	}
 
 
-	
+
 	customVars {
 		1{
 			name = gender
@@ -49,24 +55,24 @@ plugin.tx_rsgoogleanalytics {
 			data = TSFE:fe_user|user|name
 		}
 	}
-	
+
 	visitorSegment.data = TSFE:fe_user|user|name
 
 		// currently not implented
 	campaignTracking {
 		allowAnchor = false
 		track = true
-		nameKey = 
+		nameKey =
 		contentKey =
 		mediumKey =
 		NOKey =
-		sourceKey = 
-		termKey = 
-		
-		referrerOveride = 
+		sourceKey =
+		termKey =
+
+		referrerOveride =
 		cookieTimeout = default
 	}
-	
+
 	eCommerce {
 		enableTracking = true
 	}
@@ -91,9 +97,9 @@ page {
 		200 = USER_INT
 		200.userFunc = tx_rsgoogleanalytics->processTrackingCode
 	}
-	
+
 	includeJSFooterlibs {
-	
+
 		rsgoogleanalytics = http://www.google-analytics.com/ga.js
 		rsgoogleanalytics.external = 1
 	}

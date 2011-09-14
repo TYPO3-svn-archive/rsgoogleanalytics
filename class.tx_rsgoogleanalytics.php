@@ -104,7 +104,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	 * @return string JS tracking code
 	 */
 	protected function buildTrackingCode($pageName = NULL) {
-		$codeTemplate = file_get_contents(t3lib_div::getFileAbsFileName('EXT:rsgoogleanalytics/codeTemplate.js'));
+		$codeTemplate = file_get_contents(t3lib_div::getFileAbsFileName($this->modConfig['templateFile']));
 		$marker = array(
 			'ACCOUNT' => $this->modConfig['account'],
 			'TRACKER_VAR' => $this->trackerVar,
