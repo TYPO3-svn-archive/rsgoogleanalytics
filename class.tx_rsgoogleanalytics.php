@@ -68,10 +68,11 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 
 	/**
 	 * adds the tracking code at the end of the body tag (pi Method called from TS USER_INT). further the method
-	 * adds some js code for downloads and exteneral links if configured.
+	 * adds some js code for downloads and external links if configured.
 	 *
-	 * @var		string	page content
-	 * @return	string	page content with google tracking code.
+	 * @param string $content page content
+	 * @param array $params Additional call parameters (unused for now)
+	 * @return string Page content with google tracking code
 	 */
 	public function processTrackingCode($content, $params) {
 			// return if the extension is not activated or no account is configured
@@ -97,9 +98,10 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	}
 
 	/**
-	 * This method generates the google tracking code (js script at the end of the body tag).
+	 * This method generates the google tracking code (JS script at the end of the body tag).
 	 *
-	 * @return	string	js tracking code
+	 * @param string $pageName Name of the page to register for tracking
+	 * @return string JS tracking code
 	 */
 	protected function buildTrackingCode($pageName = NULL) {
 		$codeTemplate = file_get_contents(t3lib_div::getFileAbsFileName('EXT:rsgoogleanalytics/codeTemplate.js'));
@@ -129,8 +131,10 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	}
 
 	/**
-	 * generates Commands which are needed for sub/cross-domain-tracking.
+	 * Generates Commands which are needed for sub/cross-domain-tracking.
 	 * linkProcessing needs this to handle the domains, which should get a "link" tracker
+	 *
+	 * @return void
 	 */
 	protected function makeDomainConfiguration() {
 		if (count($this->domainConfig) == 0) {
@@ -148,6 +152,8 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	}
 
 	/**
+	 * Generates Commands for tracking custom variables
+	 *
 	 * @return void
 	 */
 	protected function makeSpecialVars() {
@@ -181,6 +187,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	}
 
 	/**
+	 * Generates Commands for e-commerce tracking
 	 * @return
 	 */
 	protected function makeECommerceTracking() {
@@ -201,6 +208,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	}
 
 	/**
+	 * Generates Commands related to search engine configuration
 	 * @return void
 	 */
 	protected function makeSearchEngineConfiguration() {
@@ -213,7 +221,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 				$i++;
 			}
 		}
-			// which referers should be handled as "own domain"
+			// which referrers should be handled as "own domain"
 		if ($this->modConfig['redirectReferer']) {
 			$domains = t3lib_div::trimExplode(',', $this->modConfig['redirectReferer'], 1);
 			foreach ($domains AS $val) {
@@ -223,6 +231,11 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 		}
 	}
 
+	/**
+	 * Generates Commands for data tracking
+	 *
+	 * @return void
+	 */
 	protected function makeDataTracking() {
 		if ($this->modConfig['disableDataTracking.']['browserInfo']) {
 			$this->commands[500] = $this->buildCommand('setClientInfo', array(false));
@@ -238,10 +251,23 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 		}
 	}
 
+	/**
+	 * Assembles a single tracker command
+	 *
+	 * @param string $command The name of the command
+	 * @param array $parameter The list of call parameters
+	 * @return string The assemble JavaScript command
+	 */
 	protected function buildCommand($command, array $parameter) {
 		return "\t" . $this->trackerVar . '._' . $command . '(' . implode(',', $this->wrapJSParams($parameter)) . ');';
 	}
 
+	/**
+	 * Wraps and escapes a list of parameters for proper usage in JavaScript
+	 *
+	 * @param array $parameter List of parameters to handle
+	 * @return array The wrapped and escaped parameters
+	 */
 	protected function wrapJSParams(array $parameter) {
 		for ($i = 0; $i < count($parameter); $i++) {
 			if (!is_bool($parameter[$i]) && !is_numeric($parameter[$i])) {
@@ -256,8 +282,8 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	/**
 	 * This method checks whether the URL is in the list to track
 	 *
-	 * @param	string		$file: filename (with directories from siteroot) which is linked
-	 * @return	boolean		True if filename is in locations, false if not
+	 * @param string $url filename (with directories from site root) which is linked
+	 * @return boolean True if filename is in locations, false if not
 	 */
 	protected function checkURL($url) {
 		$locations = t3lib_div::trimExplode(',', $this->modConfig['trackExternals.']['domainList'], 1);
@@ -269,8 +295,9 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 
 	/**
 	 * This method checks whether the given file is in the paths to track
-	 * @param	string		$file: filename (with directories from siteroot) which is linked
-	 * @return	boolean		True if filename is in locations, false if not
+	 *
+	 * @param string $file Filename (with directories from site root) which is linked
+	 * @return boolean True if filename is in locations, false if not
 	 */
 	protected function checkFilePath($file) {
 		$locations = t3lib_div::trimExplode(',', $this->modConfig['trackDownloads.']['folderList']);
@@ -283,8 +310,8 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	/**
 	 * This method checks whether the given file if of a type to track
 	 *
-	 * @param	string		$file: filename (with directories from siteroot) which is linked
-	 * @return	boolean		True if filename is in list, false if not
+	 * @param string $file Filename (with directories from site root) which is linked
+	 * @return boolean True if filename is in list, false if not
 	 */
 	protected function checkFileType($file) {
 		$pathParts = pathinfo($file);
@@ -292,9 +319,10 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	}
 
 	/**
-	 * Checks wether filePath and Type is in allowed range
-	 * @param string $file filename (with directories from siteroot) which is linked
-	 * @return boolean true if filename is in locations and filetype should be tracked, false if not
+	 * Checks whether filePath and Type is in allowed range
+	 *
+	 * @param string $file filename (with directories from site root) which is linked
+	 * @return boolean True if filename is in locations and file type should be tracked, false if not
 	 */
 	protected function checkFile(&$file) {
 		return $this->checkFilePath($file) && $this->checkFileType($file);
@@ -302,13 +330,15 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	}
 
 	/**
-	 * Hooks into TYPOLink Generation
-	 * classic userFunc hook called in tslib/tslib_content.php
+	 * Hooks into TYPOLink generation
+	 * Classic userFunc hook called in tslib/tslib_content.php
 	 * Used to add Google Analytics tracking code to hyperlinks
 	 *
+	 * @param array $params TypoLink configuration
+	 * @param tslib_cObj $reference Back-reference to the calling object
 	 * @return void
 	 */
-	function linkPostProcess(&$params, &$reference) {
+	function linkPostProcess(&$params, $reference) {
 		if (!$this->isActive()) return;
 		$this->makeDomainConfiguration();
 
@@ -322,7 +352,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 				if ( /*checkInMultiple($url)*/
 					0) {
 					$function = $this->buildCommand('link', array($url)) . 'return false;';
-				} else if ($this->modConfig['trackExternals'] && ($this->checkURL($url) || $this->modConfig['trackExternals'] == '!ALL')) {
+				} elseif ($this->modConfig['trackExternals'] && ($this->checkURL($url) || $this->modConfig['trackExternals'] == '!ALL')) {
 					$function = $this->buildCommand('trackEvent', array('Leaving Site', 'External URL', $url));
 				}
 				break;
@@ -366,7 +396,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	}
 
 	/**
-	 * adds an ecommerce transaction to be tracked
+	 * adds an e-commerce transaction to be tracked
 	 *
 	 * @param string $orderId
 	 * @param string $storeName
@@ -385,7 +415,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	}
 
 	/**
-	 * Checks wether the plugin is active
+	 * Checks whether the plugin is active
 	 *
 	 * @return bool
 	 */
