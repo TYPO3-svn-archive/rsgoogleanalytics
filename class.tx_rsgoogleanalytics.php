@@ -77,7 +77,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	public function processTrackingCode($content, $params) {
 			// return if the extension is not activated or no account is configured
 		if (!$this->isActive()) {
-			return content;
+			return $content;
 		}
 			// detect how the pageTitle should be rendered
 		if ($this->modConfig['registerTitle'] == 'title') {
