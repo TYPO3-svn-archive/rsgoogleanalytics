@@ -82,7 +82,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 			// detect how the pageTitle should be rendered
 		if ($this->modConfig['registerTitle'] == 'title') {
 			$pageName = '\'' . $GLOBALS['TSFE']->page['title'] . '\'';
-		} else if ($this->modConfig['registerTitle'] == 'rootline') {
+		} elseif ($this->modConfig['registerTitle'] == 'rootline') {
 			$rootline = $GLOBALS['TSFE']->sys_page->getRootLine($GLOBALS['TSFE']->page['uid']);
 			$pageName = '\'';
 			for ($i = 0; $i < count($rootline); $i++) {
@@ -144,7 +144,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 				$this->commands[11] = $this->buildCommand("setAllowLinker", array("enable"));
 				$this->commands[12] = $this->buildCommand("setAllowHash", array(false));
 
-			} else if ($this->modConfig['trackSubDomains'] && $this->modConfig['trackSubDomains'] != 'false') {
+			} elseif ($this->modConfig['trackSubDomains'] && $this->modConfig['trackSubDomains'] != 'false') {
 				$this->commands[10] = $this->buildCommand("setDomainName", array("." . $this->modConfig['trackSubDomains.']['domainName']));
 				$this->commands[12] = $this->buildCommand("setAllowHash", array(false));
 			}
