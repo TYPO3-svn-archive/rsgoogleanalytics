@@ -256,10 +256,22 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	 *
 	 * @param string $command The name of the command
 	 * @param array $parameter The list of call parameters
-	 * @return string The assemble JavaScript command
+	 * @return string The assembled JavaScript command
 	 */
 	protected function buildCommand($command, array $parameter) {
-		return "\t" . $this->trackerVar . '._' . $command . '(' . implode(',', $this->wrapJSParams($parameter)) . ');';
+			// Generate traditional code
+		if (empty($this->modConfig['asynchronous'])) {
+			$command = "\t" . $this->trackerVar . '._' . $command . '(' . implode(', ', $this->wrapJSParams($parameter)) . ');';
+
+			// Generate asynchronous code
+		} else {
+			$command = "\t_gaq.push(['_" . $command . "'";
+			if (count($parameter) > 0) {
+				$command .= ', ' . implode(', ', $this->wrapJSParams($parameter));
+			}
+			$command .= ']);';
+		}
+		return $command;
 	}
 
 	/**
@@ -270,10 +282,10 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	 */
 	protected function wrapJSParams(array $parameter) {
 		for ($i = 0; $i < count($parameter); $i++) {
-			if (!is_bool($parameter[$i]) && !is_numeric($parameter[$i])) {
-				$parameter[$i] = '"' . str_replace('"', '\"', $parameter[$i]) . '"';
-			} else if (is_bool($parameter[$i])) {
+			if (is_bool($parameter[$i])) {
 				$parameter[$i] = ($parameter[$i] ? 'true' : 'false');
+			} else {
+				$parameter[$i] = "'" . str_replace("'", "\'", $parameter[$i]) . "'";
 			}
 		}
 		return $parameter;
