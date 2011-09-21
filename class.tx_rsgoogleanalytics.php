@@ -371,9 +371,8 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 			case 'file':
 				if ($this->modConfig['trackDownloads']) {
 					$fileName = $params['finalTagParts']['url'];
-					$file = t3lib_div::getFileAbsFileName($fileName);
-					$fileInfo = pathinfo($file);
-					// TODO: provide hook where downloader extension can register there transformation function
+					$fileInfo = pathinfo($fileName);
+					// TODO: provide hook where downloader extension can register their transformation function
 
 					if ($this->checkFile($fileName) || $this->modConfig['trackDownloads'] == '!ALL') {
 						$function = $this->buildCommand('trackEvent', array('Download', $fileInfo['extension'], $fileName));
