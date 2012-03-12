@@ -2,7 +2,7 @@ plugin.tx_rsgoogleanalytics {
 	# File containing the JavaScript code template
 	templateFile = EXT:rsgoogleanalytics/res/templates/codeTraditional.js
 
-	# Whether tradition or asynchronous method should be used (set to 1 for asynchronous). Beware to be consistent with template file
+	# Whether traditional or asynchronous method should be used (set to 1 for asynchronous). Beware to be consistent with template file
 	asynchronous = 0
 
 	# Boolean, whether plugin is active or not

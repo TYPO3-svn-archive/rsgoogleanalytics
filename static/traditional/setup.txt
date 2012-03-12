@@ -13,5 +13,5 @@ page {
 }
 
 [globalString = _SERVER|HTTPS=on]
-	page.includeJSlibs.rsgoogleanalytics = https://ssl.google-analytics.com/ga.js
+	page.includeJSFooterlibs.rsgoogleanalytics = https://ssl.google-analytics.com/ga.js
 [global]
