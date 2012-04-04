@@ -158,6 +158,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	 */
 	protected function makeSpecialVars() {
 		$x = 300;
+			/** @var $cObj tslib_cObj */
 		$cObj = t3lib_div::makeInstance('tslib_cObj');
 
 			// render CustomVars
@@ -224,6 +225,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 			// which referrers should be handled as "own domain"
 		if ($this->modConfig['redirectReferer']) {
 			$domains = t3lib_div::trimExplode(',', $this->modConfig['redirectReferer'], 1);
+			$i = 0;
 			foreach ($domains AS $val) {
 				$this->commands[$i] = $this->buildCommand('addIgnoredRef', array($val));
 				$i++;
