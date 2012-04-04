@@ -86,16 +86,17 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 		}
 			// detect how the pageTitle should be rendered
 		if ($this->modConfig['registerTitle'] == 'title') {
-			$pageName = '\'' . $GLOBALS['TSFE']->page['title'] . '\'';
+			$pageName = str_replace(array(CR, LF), '', trim($GLOBALS['TSFE']->page['title']));
 		} elseif ($this->modConfig['registerTitle'] == 'rootline') {
 			$rootline = $GLOBALS['TSFE']->sys_page->getRootLine($GLOBALS['TSFE']->page['uid']);
-			$pageName = '\'';
-			for ($i = 0; $i < count($rootline); $i++) {
+			$pageName = '';
+			$rootlineLength = count($rootline);
+			for ($i = 0; $i < $rootlineLength; $i++) {
 				if ($rootline[$i]['is_siteroot'] == 0) {
-					$pageName .= '/' . addslashes($rootline[$i]['title']);
+					$title = str_replace(array(CR, LF), '', $rootline[$i]['title']);
+					$pageName .= '/' . addslashes(trim($title));
 				}
 			}
-			$pageName .= '\'';
 		} else {
 			$pageName = NULL;
 		}
