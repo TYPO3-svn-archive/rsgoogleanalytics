@@ -2,7 +2,7 @@
 /***************************************************************
  *  Copyright notice
  *
- *  (c) 2005-2011	 Steffen Ritter (info@rs-websystems.de)
+ *  (c) 2005-2012	 Steffen Ritter (info@rs-websystems.de)
  *
  *  All rights reserved
  *
@@ -22,9 +22,14 @@
  ***************************************************************/
 
 /*
- * Inspired by m1_google_analytics, using ga.js
+ * Inserts Google Analytics code into any page. Also uses hooks to add tracking code to external
+ * or download links. Provides an API for adding custom tracking variables
  *
- * @author	Steffen Ritter
+ * Originally inspired by m1_google_analytics.
+ *
+ * @author Steffen Ritter <info@rs-websystems.de>
+ * @package TYPO3
+ * @subpackage tx_rsgoogleanalytics
  */
 class tx_rsgoogleanalytics implements t3lib_singleton {
 	/**
