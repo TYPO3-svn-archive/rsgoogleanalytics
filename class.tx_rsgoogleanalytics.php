@@ -53,7 +53,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	protected $eCommerce = array('items' => array(), 'transaction' => array());
 
 	/**
-	 * constructs the system.
+	 * Constructs the system.
 	 */
 	public function __construct() {
 		$this->modConfig = $GLOBALS['TSFE']->tmpl->setup['plugin.']['tx_rsgoogleanalytics.'];
@@ -67,8 +67,8 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	}
 
 	/**
-	 * adds the tracking code at the end of the body tag (pi Method called from TS USER_INT). further the method
-	 * adds some js code for downloads and external links if configured.
+	 * Adds the tracking code at the end of the body tag (pi Method called from TS USER_INT). further the method
+	 * Adds some js code for downloads and external links if configured.
 	 *
 	 * @param string $content page content
 	 * @param array $params Additional call parameters (unused for now)
@@ -98,7 +98,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	}
 
 	/**
-	 * This method generates the google tracking code (JS script at the end of the body tag).
+	 * Generates the google tracking code (JS script at the end of the body tag).
 	 *
 	 * @param string $pageName Name of the page to register for tracking
 	 * @return string JS tracking code
@@ -125,7 +125,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 
 		ksort($this->commands);
 		$marker['COMMANDS'] = implode("\n", $this->commands);
-		$code = t3lib_parsehtml::substituteMarkerArray($codeTemplate, $marker, '###|###', true, true);
+		$code = t3lib_parsehtml::substituteMarkerArray($codeTemplate, $marker, '###|###', TRUE, TRUE);
 
 		return $code;
 	}
@@ -140,13 +140,13 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 		if (count($this->domainConfig) == 0) {
 			if ($this->modConfig['multipleDomains'] && $this->modConfig['multipleDomains'] != 'false') {
 				$this->domainConfig['multiple'] = t3lib_div::trimExplode(',', $this->modConfig['multipleDomains.']['domainNames'], 1);
-				$this->commands[10] = $this->buildCommand("setDomainName", array("none"));
-				$this->commands[11] = $this->buildCommand("setAllowLinker", array("enable"));
-				$this->commands[12] = $this->buildCommand("setAllowHash", array(false));
+				$this->commands[10] = $this->buildCommand('setDomainName', array('none'));
+				$this->commands[11] = $this->buildCommand('setAllowLinker', array('enable'));
+				$this->commands[12] = $this->buildCommand('setAllowHash', array(FALSE));
 
 			} elseif ($this->modConfig['trackSubDomains'] && $this->modConfig['trackSubDomains'] != 'false') {
-				$this->commands[10] = $this->buildCommand("setDomainName", array("." . $this->modConfig['trackSubDomains.']['domainName']));
-				$this->commands[12] = $this->buildCommand("setAllowHash", array(false));
+				$this->commands[10] = $this->buildCommand('setDomainName', array('.' . $this->modConfig['trackSubDomains.']['domainName']));
+				$this->commands[12] = $this->buildCommand('setAllowHash', array(FALSE));
 			}
 		}
 	}
@@ -161,7 +161,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 			/** @var $cObj tslib_cObj */
 		$cObj = t3lib_div::makeInstance('tslib_cObj');
 
-			// render CustomVars
+			// Render CustomVars
 		for ($i = 1; $i <= 5; $i++) {
 			if (is_array($this->modConfig['customVars.'][$i . '.'])) {
 				$data = $cObj->stdWrap('', $this->modConfig['customVars.'][$i . '.']);
@@ -178,7 +178,7 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 			}
 		}
 
-		// render customSegment
+			// Render customSegment
 		$currentValue = explode('.', $_COOKIE['__utmv']);
 		$currentValue = $currentValue[1];
 		$shouldBe = $cObj->stdWrap('', $this->modConfig['visitorSegment.']);
@@ -192,8 +192,12 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	 * @return
 	 */
 	protected function makeECommerceTracking() {
-		if (!$this->modConfig['eCommerce.']['enableTracking']) return;
-		$i = 2000; // Should be after trackPageView()
+		if (!$this->modConfig['eCommerce.']['enableTracking']) {
+			return;
+		}
+
+			// Should be after trackPageView()
+		$i = 2000;
 		foreach ($this->eCommerce['transaction'] AS $trans) {
 			$this->commands[$i] = $this->buildCommand('addTrans', $trans);
 			$i++;
@@ -240,13 +244,13 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	 */
 	protected function makeDataTracking() {
 		if ($this->modConfig['disableDataTracking.']['browserInfo']) {
-			$this->commands[500] = $this->buildCommand('setClientInfo', array(false));
+			$this->commands[500] = $this->buildCommand('setClientInfo', array(FALSE));
 		}
 		if ($this->modConfig['disableDataTracking.']['flashTest']) {
-			$this->commands[501] = $this->buildCommand('setDetectFlash', array(false));
+			$this->commands[501] = $this->buildCommand('setDetectFlash', array(FALSE));
 		}
 		if ($this->modConfig['disableDataTracking.']['pageTitle']) {
-			$this->commands[502] = $this->buildCommand('setDetectTitle', array(false));
+			$this->commands[502] = $this->buildCommand('setDetectTitle', array(FALSE));
 		}
 		if ($this->modConfig['disableDataTracking.']['anonymizeIp']) {
 			$this->commands[503] = $this->buildCommand('anonymizeIp', array());
@@ -302,9 +306,11 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	protected function checkURL($url) {
 		$locations = t3lib_div::trimExplode(',', $this->modConfig['trackExternals.']['domainList'], 1);
 		foreach ($locations as $location) {
-			if (strpos($url, $location) !== false) return true;
+			if (strpos($url, $location) !== FALSE) {
+				return TRUE;
+			}
 		}
-		return false;
+		return FALSE;
 	}
 
 	/**
@@ -316,9 +322,11 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	protected function checkFilePath($file) {
 		$locations = t3lib_div::trimExplode(',', $this->modConfig['trackDownloads.']['folderList']);
 		foreach ($locations as $location) {
-			if (strpos($file, $location) !== false) return true;
+			if (strpos($file, $location) !== FALSE) {
+				return TRUE;
+			}
 		}
-		return false;
+		return FALSE;
 	}
 
 	/**
@@ -401,7 +409,9 @@ class tx_rsgoogleanalytics implements t3lib_singleton {
 	 * @return void
 	 */
 	public function addCommerceItem($orderId, $sku, $name, $category, $price, $quantity) {
-		if (!$this->isActive() || !$this->modConfig['eCommerce.']['enableTracking']) return;
+		if (!$this->isActive() || !$this->modConfig['eCommerce.']['enableTracking']) {
+			return;
+		}
 
 		if (isset($this->eCommerce['transaction'][$orderId])) {
 			$this->eCommerce['items'][] = array(0 => $orderId, 1 => $sku, 2 => $name, 3 => $category, 4 => $price, 5 => $quantity);
